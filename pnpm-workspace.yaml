@@ -1,0 +1,5 @@
+packages:
+  - 'scraper'
+  - '.'
+allowBuilds:
+  sharp: true

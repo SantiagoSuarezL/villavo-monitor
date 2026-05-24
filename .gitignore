@@ -1,0 +1,15 @@
+# IA
+.agent/
+.claude/
+CLAUDE.md
+opencode.json
+
+# Logs
+logs/
+
+# Dependencias
+node_modules/
+venv/
+
+# Configuración de entorno
+.env
