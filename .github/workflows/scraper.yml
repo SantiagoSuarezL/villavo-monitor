@@ -1,0 +1,34 @@
+name: EAAV Scraper
+
+on:
+  schedule:
+    - cron: '0 13,19 * * *'  # 8:00 AM y 2:00 PM Colombia (UTC-5)
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --filter villavo-monitor-scraper
+
+      - name: Install Playwright browsers
+        run: cd scraper && pnpm playwright install chromium --with-deps
+
+      - name: Run scraper
+        run: cd scraper && pnpm start
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}

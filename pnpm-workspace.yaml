@@ -2,4 +2,5 @@ packages:
   - 'scraper'
   - '.'
 allowBuilds:
+  esbuild: set this to true or false
   sharp: true

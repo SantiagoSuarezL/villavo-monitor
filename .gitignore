@@ -3,6 +3,7 @@
 .claude/
 CLAUDE.md
 opencode.json
+prompt.md
 
 # Logs
 logs/

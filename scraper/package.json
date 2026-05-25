@@ -4,15 +4,19 @@
   "type": "module",
   "scripts": {
     "migrate": "ts-node --esm db.ts migrate",
-    "start": "ts-node --esm index.ts"
+    "start": "node --loader ts-node/esm index.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.14.0",
-    "dotenv": "^17.4.2"
+    "axios": "^1.16.1",
+    "dotenv": "^17.4.2",
+    "playwright": "^1.60.0",
+    "unpdf": "^1.6.2"
   },
   "devDependencies": {
     "@types/node": "^20.x",
     "ts-node": "^10.x",
+    "tsx": "^4.22.3",
     "typescript": "^5.x"
   }
 }
