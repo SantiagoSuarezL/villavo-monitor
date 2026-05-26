@@ -98,11 +98,81 @@ export async function insertReporte(data: {
 }): Promise<number> {
   const db = await getDbClient();
   try {
-    const result = await db.execute({
-      sql: 'INSERT INTO reportes_diarios (sector_id, estado, hora_inicio, hora_fin, fecha) VALUES (?, ?, ?, ?, ?)',
+    await db.execute({
+      sql: `INSERT INTO reportes_diarios (sector_id, estado, hora_inicio, hora_fin, fecha)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(sector_id, fecha)
+            DO UPDATE SET estado = excluded.estado,
+                          hora_inicio = excluded.hora_inicio,
+                          hora_fin = excluded.hora_fin`,
       args: [data.sector_id, data.estado, data.hora_inicio ?? null, data.hora_fin ?? null, data.fecha],
     });
-    return Number(result.lastInsertRowid);
+
+    const result = await db.execute({
+      sql: 'SELECT id FROM reportes_diarios WHERE sector_id = ? AND fecha = ?',
+      args: [data.sector_id, data.fecha],
+    });
+
+    return Number(result.rows[0].id);
+  } finally {
+    db.close();
+  }
+}
+
+export async function getProcessedDates(): Promise<Set<string>> {
+  const db = await getDbClient();
+  try {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const prefix = `${year}-${month}`;
+
+    const result = await db.execute({
+      sql: 'SELECT DISTINCT fecha FROM reportes_diarios WHERE fecha LIKE ? ORDER BY fecha ASC',
+      args: [`${prefix}%`],
+    });
+    return new Set(result.rows.map(row => String(row.fecha)));
+  } finally {
+    db.close();
+  }
+}
+
+export async function cleanOldData(): Promise<void> {
+  const db = await getDbClient();
+  try {
+    const result = await db.execute(
+      `SELECT COUNT(*) as count FROM reportes_diarios 
+       WHERE fecha < date('now', '-90 days')`
+    );
+    const count = Number(result.rows[0].count);
+
+    if (count === 0) {
+      console.log('✓ Limpieza: no hay datos viejos que borrar');
+      return;
+    }
+
+    await db.execute(
+      `DELETE FROM reporte_barrios WHERE reporte_id IN (
+        SELECT id FROM reportes_diarios WHERE fecha < date('now', '-90 days')
+      )`
+    );
+    await db.execute(
+      `DELETE FROM reportes_diarios WHERE fecha < date('now', '-90 days')`
+    );
+
+    console.log(`✓ Limpieza: ${count} reportes viejos eliminados (>90 días)`);
+  } finally {
+    db.close();
+  }
+}
+
+export async function deleteReporteBarrios(reporteId: number): Promise<void> {
+  const db = await getDbClient();
+  try {
+    await db.execute({
+      sql: 'DELETE FROM reporte_barrios WHERE reporte_id = ?',
+      args: [reporteId],
+    });
   } finally {
     db.close();
   }
@@ -125,89 +195,3 @@ export async function insertReporteBarrios(reporteId: number, barrioIds: number[
     db.close();
   }
 }
-
-async function migrate() {
-  let db;
-  try {
-    db = await getDbClient();
-    console.log('✓ Conexión Turso exitosa');
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
-    console.error('✗ Error al conectar a Turso:', msg);
-    process.exit(1);
-  }
-
-  const tables = [
-    {
-      name: 'sectores',
-      sql: `CREATE TABLE IF NOT EXISTS sectores (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nombre_sector TEXT UNIQUE NOT NULL
-      );`,
-    },
-    {
-      name: 'barrios',
-      sql: `CREATE TABLE IF NOT EXISTS barrios (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nombre_barrio TEXT NOT NULL,
-        sector_id INTEGER,
-        FOREIGN KEY (sector_id) REFERENCES sectores(id)
-      );`,
-    },
-    {
-      name: 'reportes_diarios',
-      sql: `CREATE TABLE IF NOT EXISTS reportes_diarios (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        sector_id INTEGER NOT NULL,
-        estado TEXT NOT NULL,
-        hora_inicio TEXT,
-        hora_fin TEXT,
-        fecha DATE NOT NULL,
-        hora_monitoreo DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (sector_id) REFERENCES sectores(id)
-      );`,
-    },
-    {
-      name: 'reporte_barrios',
-      sql: `CREATE TABLE IF NOT EXISTS reporte_barrios (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        reporte_id INTEGER NOT NULL,
-        barrio_id INTEGER NOT NULL,
-        FOREIGN KEY (reporte_id) REFERENCES reportes_diarios(id),
-        FOREIGN KEY (barrio_id) REFERENCES barrios(id)
-      );`,
-    },
-    {
-      name: 'alias_normalizacion',
-      sql: `CREATE TABLE IF NOT EXISTS alias_normalizacion (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        alias_text TEXT UNIQUE NOT NULL,
-        sector_id_referencia INTEGER NOT NULL,
-        FOREIGN KEY (sector_id_referencia) REFERENCES sectores(id)
-      );`,
-    },
-  ];
-
-  try {
-    for (const table of tables) {
-      await db.execute(table.sql);
-      console.log(`✓ Tabla ${table.name} creada`);
-    }
-
-    console.log('✓ Tablas creadas: sectores, barrios, reportes_diarios, reporte_barrios, alias_normalizacion');
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
-    console.error('✗ Error al crear tablas:', msg);
-    process.exit(1);
-  } finally {
-    await db.close();
-  }
-}
-
-migrate().catch(error => {
-  const msg = error instanceof Error ? error.message : String(error);
-  console.error('Error en la migración:', msg);
-  process.exit(1);
-});
-
-export { migrate };

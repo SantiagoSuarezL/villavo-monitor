@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "migrate": "ts-node --esm db.ts migrate",
+    "migrate": "ts-node --esm migrate.ts",
     "start": "node --loader ts-node/esm index.ts"
   },
   "dependencies": {
