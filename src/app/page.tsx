@@ -71,7 +71,7 @@ export default async function Home({
         <header className="sticky top-0 z-10 bg-white border-b border-[#e5e7eb]">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
             <div className="min-w-0">
-              <h1 className="text-xl font-bold text-[#111827]">Villavo Monitor</h1>
+              <h1 className="text-xl font-bold text-[#111827]">Monitoreo en Villavo</h1>
               <p className="text-xs text-[#6b7280] hidden sm:block">Estado del suministro de agua · EAAV Villavicencio</p>
             </div>
             <Suspense fallback={null}>

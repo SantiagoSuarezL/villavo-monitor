@@ -5,8 +5,9 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Villavo Monitor',
+  title: 'Monitoreo en Villavo',
   description: 'Estado del suministro de agua - EAAV Villavicencio',
+  icons: { icon: '/favicon.ico' },
 };
 
 export default function RootLayout({
