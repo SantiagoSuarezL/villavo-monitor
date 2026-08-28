@@ -1,28 +1,38 @@
 # AI
-.agent/
+opencode.json
 .claude/
 CLAUDE.md
-opencode.json
-prompts/
-DESIGN.md
+.agent/skills/
 
 # Logs
 logs/
+*.log
 
-# dependencies
+# dependencies (unanchored: cubre node_modules de todos los workspaces)
 node_modules/
-/.pnp
+.pnp
 .pnp.js
+.pnpm-store/
 
-# testing
-/coverage
+# testing (unanchored: cubre coverage de cualquier workspace)
+coverage/
 
-# next.js
-/.next/
-/out/
+# next.js (unanchored: .next puede generarse en cualquier workspace)
+.next/
+out/
 
-# production
-/build
+# production / build output
+build/
+dist/
+
+# caches
+.cache/
+.turbo/
+.eslintcache
+
+# playwright
+.test-results/
+playwright-report/
 
 # misc
 .DS_Store
@@ -32,6 +42,7 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
 # local env files
 .env*.local
@@ -43,3 +54,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# graphify
+graphify-out/
