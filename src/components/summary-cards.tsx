@@ -2,6 +2,7 @@
 
 import React from 'react';
 import useSWR from 'swr';
+import { Reveal } from '@/components/reveal';
 
 interface Summary {
   fecha: string;
@@ -16,28 +17,32 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 const cards = [
   {
-    icon: '💧',
+    marker: '01',
     key: 'con_servicio' as const,
     label: 'Sectores con agua hoy',
-    color: 'text-green-600',
+    dot: 'bg-green-600',
+    tone: 'text-green-700',
   },
   {
-    icon: '🚫',
+    marker: '02',
     key: 'sin_servicio' as const,
     label: 'Sectores sin agua hoy',
-    color: 'text-red-600',
+    dot: 'bg-red-600',
+    tone: 'text-red-700',
   },
   {
-    icon: '⚠️',
+    marker: '03',
     key: 'baja_presion' as const,
     label: 'Con baja presión',
-    color: 'text-yellow-600',
+    dot: 'bg-yellow-600',
+    tone: 'text-yellow-700',
   },
   {
-    icon: '📊',
+    marker: '04',
     key: 'total_sectores' as const,
     label: 'Sectores monitoreados',
-    color: 'text-blue-600',
+    dot: 'bg-accent',
+    tone: 'text-ink',
   },
 ];
 
@@ -48,12 +53,12 @@ export function SummaryCards() {
 
   if (!data) {
     return (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {cards.map((card) => (
-          <div key={card.key} className="bg-white rounded-lg border border-[#e5e7eb] p-4 animate-pulse">
-            <div className="h-8 w-8 bg-gray-200 rounded mb-2" />
-            <div className="h-7 bg-gray-200 rounded w-16 mb-1" />
-            <div className="h-4 bg-gray-200 rounded w-24" />
+          <div key={card.key} className="border border-line bg-paper rounded-lg p-4 animate-pulse">
+            <div className="h-3 w-8 bg-paper-deep rounded mb-3" />
+            <div className="h-8 bg-paper-deep rounded w-14 mb-1.5" />
+            <div className="h-3 bg-paper-deep rounded w-24" />
           </div>
         ))}
       </div>
@@ -61,18 +66,24 @@ export function SummaryCards() {
   }
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      {cards.map((card) => (
-        <div
-          key={card.key}
-          className="bg-white rounded-lg border border-[#e5e7eb] p-4"
-        >
-          <div className={`text-2xl mb-1 ${card.color}`}>{card.icon}</div>
-          <div className="text-2xl font-bold text-[#111827]">
-            {data[card.key]}
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      {cards.map((card, i) => (
+        <Reveal key={card.key} delay={i * 70}>
+          <div className="frame-brackets h-full rounded-lg border border-line bg-paper px-4 py-3.5">
+            <div className="flex items-center justify-between">
+              <span className={`size-1.5 rounded-full ${card.dot}`} />
+              <span className="font-mono text-[10px] tracking-widest text-mute">
+                {card.marker}
+              </span>
+            </div>
+            <div className={`mt-3 text-3xl font-semibold tabular-nums tracking-tight ${card.tone}`}>
+              {data[card.key]}
+            </div>
+            <div className="mt-1 font-mono text-[10px] uppercase leading-snug tracking-wider text-mute">
+              {card.label}
+            </div>
           </div>
-          <div className="text-sm text-[#6b7280] mt-0.5">{card.label}</div>
-        </div>
+        </Reveal>
       ))}
     </div>
   );

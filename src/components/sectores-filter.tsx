@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import useSWR from 'swr';
+import { useNavPending } from '@/components/nav-pending';
 
 interface Sector {
   id: number;
@@ -14,6 +15,7 @@ export function SectoresFilter({ currentSectorId }: { currentSectorId: string | 
   const { data: sectores } = useSWR<Sector[]>('/api/sectores', fetcher, {
     revalidateOnFocus: false,
   });
+  const { navigate } = useNavPending();
 
   const [selected, setSelected] = useState(currentSectorId ?? '');
 
@@ -26,14 +28,14 @@ export function SectoresFilter({ currentSectorId }: { currentSectorId: string | 
     } else {
       url.searchParams.delete('sector_id');
     }
-    window.location.href = url.toString();
+    navigate(url.toString());
   };
 
   return (
     <select
       value={selected}
       onChange={handleChange}
-      className="block w-full sm:w-48 rounded-md border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-[#111827] shadow-sm focus:border-[#111827] focus:outline-none focus:ring-1 focus:ring-[#111827]"
+      className="block w-full sm:w-52 rounded-md border border-line bg-paper px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/40"
     >
       <option value="">Todos los sectores</option>
       {(sectores ?? []).map((s) => (

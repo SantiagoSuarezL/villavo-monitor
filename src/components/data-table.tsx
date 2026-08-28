@@ -2,67 +2,11 @@
 
 import React, { useMemo, useState } from 'react';
 import useSWR from 'swr';
-
-interface Reporte {
-  id: number;
-  sector: string;
-  estado: string;
-  hora_inicio: string | null;
-  hora_fin: string | null;
-  fecha: string;
-  hora_monitoreo: string;
-  barrios: string[];
-}
-
-function getBadgeStyles(estado: string) {
-  switch (estado) {
-    case 'con_servicio':
-    case 'suministro_normal':
-      return 'bg-[#dcfce7] text-[#16a34a]';
-    case 'pendiente_servicio':
-      return 'bg-[#fee2e2] text-[#dc2626]';
-    case 'baja_presion':
-    case 'llenado_presurizacion':
-      return 'bg-[#fef9c3] text-[#ca8a04]';
-    case 'con_servicio_horario':
-      return 'bg-[#dbeafe] text-[#2563eb]';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
-}
-
-function getBadgeLabel(estado: string) {
-  switch (estado) {
-    case 'con_servicio':
-      return 'Con servicio';
-    case 'suministro_normal':
-      return 'Suministro normal';
-    case 'pendiente_servicio':
-      return 'Pendiente de servicio';
-    case 'baja_presion':
-      return 'Baja presión';
-    case 'llenado_presurizacion':
-      return 'Llenado/Presurización';
-    case 'con_servicio_horario':
-      return 'Con servicio horario';
-    default:
-      return estado;
-  }
-}
-
-function formatFecha(fecha: string): string {
-  const [y, m, d] = fecha.split('-').map(Number);
-  const date = new Date(y, m - 1, d);
-  return date.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
-}
-
-function extractTime(horaMonitoreo: string): string {
-  if (!horaMonitoreo) return '';
-  if (horaMonitoreo.includes('T')) {
-    return horaMonitoreo.split('T')[1]?.split('.')[0]?.substring(0, 5) ?? '';
-  }
-  return horaMonitoreo.substring(0, 5);
-}
+import { ESTADO_FALLBACK, getEstado, formatFechaCorta } from '@/lib/estados';
+import type { Reporte } from '@/lib/reporte';
+import { extractTime } from '@/lib/reporte';
+import { useEstadoGlossary } from '@/components/estado-glossary';
+import { useReporteDetail } from '@/components/reporte-detail';
 
 const MAX_VISIBLE_BARRIOS = 3;
 
@@ -87,96 +31,225 @@ export function DataTable({ reportes: initialReportes, sectorId, q }: { reportes
 
   const rows = reportes ?? initialReportes;
 
+  const fechas = useMemo(() => {
+    const set = new Set(rows.map((r) => r.fecha));
+    return Array.from(set).sort().reverse();
+  }, [rows]);
+
+  const lastFecha = fechas[0] ?? null;
+  const [fechaSel, setFechaSel] = useState<string>('latest');
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const visibleRows = useMemo(() => {
+    if (q) return rows;
+    if (fechaSel === 'all') return rows;
+    const fecha = fechaSel === 'latest' ? lastFecha : fechaSel;
+    return rows.filter((r) => r.fecha === fecha);
+  }, [rows, q, fechaSel, lastFecha]);
+
+  const fechaLabel =
+    fechaSel === 'all'
+      ? 'Todos los días'
+      : formatFechaCorta(fechaSel === 'latest' ? (lastFecha ?? '') : fechaSel);
+
+  const pickFecha = (value: string) => {
+    setFechaSel(value);
+    setMenuOpen(false);
+  };
+
   return (
     <>
-      {/* Desktop table */}
-      <div className="hidden sm:block overflow-x-auto">
-        <DesktopTable rows={rows} />
-      </div>
+      {/* Date bar */}
+      {q ? (
+        <div className="rounded-t-[7px] border-b border-line bg-paper-soft px-4 py-2.5 font-mono text-[10px] uppercase tracking-widest text-mute">
+          Histórico · últimos 30 días <span className="text-ink">// {q}</span>
+        </div>
+      ) : (
+        <div className="relative flex items-center justify-between gap-3 rounded-t-[7px] border-b border-line bg-paper-soft px-4 py-2">
+          <span className="font-mono text-[10px] uppercase tracking-widest text-mute">
+            {fechaSel === 'latest' ? 'Último reporte' : 'Reportes'}
+          </span>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-expanded={menuOpen}
+              aria-haspopup="listbox"
+              className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-line bg-paper px-2.5 py-1 font-mono text-[11px] tracking-tight text-ink transition-colors hover:border-accent focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/40"
+            >
+              {fechaLabel}
+              <svg
+                className={`size-3 text-mute transition-transform ${menuOpen ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {menuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} aria-hidden />
+                <ul
+                  role="listbox"
+                  className="dropdown-menu absolute right-0 z-20 mt-1 max-h-64 w-44 overflow-y-auto rounded-lg border border-line bg-paper p-1 shadow-[0px_0px_0px_1px_rgba(0,0,0,0.06),0px_1px_1px_-0.5px_rgba(0,0,0,0.06),0px_3px_3px_-1.5px_rgba(0,0,0,0.06),0px_6px_6px_-3px_rgba(0,0,0,0.06)]"
+                >
+                  <li>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={fechaSel === 'latest'}
+                      onClick={() => pickFecha('latest')}
+                      className={`w-full rounded-md px-2.5 py-1.5 text-left font-mono text-[11px] transition-colors hover:bg-paper-soft ${
+                        fechaSel === 'latest' ? 'text-accent' : 'text-body'
+                      }`}
+                    >
+                      Último reporte
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={fechaSel === 'all'}
+                      onClick={() => pickFecha('all')}
+                      className={`w-full rounded-md px-2.5 py-1.5 text-left font-mono text-[11px] transition-colors hover:bg-paper-soft ${
+                        fechaSel === 'all' ? 'text-accent' : 'text-body'
+                      }`}
+                    >
+                      Ver todos
+                    </button>
+                  </li>
+                  <li className="my-1 border-t border-line" role="separator" />
+                  {fechas.map((f) => (
+                    <li key={f}>
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={fechaSel === f}
+                        onClick={() => pickFecha(f)}
+                        className={`w-full rounded-md px-2.5 py-1.5 text-left font-mono text-[11px] transition-colors hover:bg-paper-soft ${
+                          fechaSel === f ? 'text-accent' : 'text-body'
+                        }`}
+                      >
+                        {formatFechaCorta(f)}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
-      {/* Mobile cards */}
-      <div className="sm:hidden divide-y divide-[#e5e7eb]">
-        {rows.map((row) => (
-          <MobileCard key={row.id} row={row} />
-        ))}
-      </div>
+      {visibleRows.length === 0 && (
+        <div className="px-4 py-10 text-center font-mono text-xs uppercase tracking-widest text-mute">
+          Sin reportes
+        </div>
+      )}
+
+      {/* Desktop table */}
+      {visibleRows.length > 0 && (
+        <>
+          <div className="hidden sm:block overflow-x-auto">
+            <DesktopTable rows={visibleRows} />
+          </div>
+
+          {/* Mobile cards */}
+          <div className="divide-y divide-line sm:hidden">
+            {visibleRows.map((row) => (
+              <MobileCard key={row.id} row={row} />
+            ))}
+          </div>
+        </>
+      )}
     </>
   );
 }
 
-function DesktopTable({ rows }: { rows: Reporte[] }) {
-  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+function EstadoBadge({ estado, horario }: { estado: string; horario?: string }) {
+  const { open } = useEstadoGlossary();
+  const info = getEstado(estado);
 
-  const toggleExpand = (id: number) => {
-    setExpandedRows((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        open(info === ESTADO_FALLBACK ? undefined : estado);
+      }}
+      title={info.description}
+      className={`inline-flex cursor-pointer items-center rounded-md border px-2 py-0.5 text-xs font-medium transition-opacity hover:opacity-80 focus:outline-none focus:ring-1 focus:ring-accent/60 ${info.badgeClass}`}
+    >
+      {info.label}
+      {horario && <span className="ml-1.5 font-mono text-[10px] tabular-nums opacity-80">{horario}</span>}
+    </button>
+  );
+}
+
+function BarriosList({ barrios }: { barrios: string[] }) {
+  const visible = barrios.slice(0, MAX_VISIBLE_BARRIOS);
+  const extra = barrios.length - visible.length;
+
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {visible.map((b, i) => (
+        <span key={i} className="text-body">
+          {b}{i < visible.length - 1 ? ',' : ''}
+        </span>
+      ))}
+      {extra > 0 && (
+        <span className="text-xs font-medium text-accent">+{extra} más</span>
+      )}
+    </div>
+  );
+}
+
+function DesktopTable({ rows }: { rows: Reporte[] }) {
+  const { open } = useReporteDetail();
 
   return (
     <table className="w-full text-sm">
-      <thead className="bg-[#f9fafb] text-[#6b7280] text-xs uppercase tracking-wider">
+      <thead className="border-b border-line bg-paper-soft font-mono text-[10px] uppercase tracking-widest text-mute">
         <tr>
           <th className="px-4 py-3 text-left font-medium">Fecha</th>
           <th className="px-4 py-3 text-left font-medium">Sector</th>
           <th className="px-4 py-3 text-left font-medium">Estado</th>
           <th className="px-4 py-3 text-left font-medium">Barrios</th>
-          <th className="px-4 py-3 text-left font-medium">Actualización</th>
+          <th className="px-4 py-3 text-left font-medium">Act.</th>
         </tr>
       </thead>
-      <tbody className="divide-y divide-[#e5e7eb]">
+      <tbody className="divide-y divide-line">
         {rows.map((row) => {
-          const expanded = expandedRows.has(row.id);
-          const visibleBarrios = expanded ? row.barrios : row.barrios.slice(0, MAX_VISIBLE_BARRIOS);
-          const hasMore = row.barrios.length > MAX_VISIBLE_BARRIOS;
+          const horario =
+            row.hora_inicio && row.hora_fin ? `${row.hora_inicio}–${row.hora_fin}` : undefined;
 
           return (
-            <tr key={row.id} className="hover:bg-gray-50 transition-colors">
-              <td className="px-4 py-3 text-[#111827] whitespace-nowrap">
-                {formatFecha(row.fecha)}
+            <tr
+              key={row.id}
+              tabIndex={0}
+              aria-label={`Ver detalle de ${row.sector}`}
+              onClick={() => open(row)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') open(row);
+              }}
+              className="cursor-pointer border-b border-line/70 transition-colors last:border-b-0 hover:bg-paper-soft/60 focus:bg-paper-soft/60 focus:outline-none"
+            >
+              <td className="px-4 py-3 font-mono text-xs tracking-tight text-ink whitespace-nowrap tabular-nums">
+                {formatFechaCorta(row.fecha)}
               </td>
-              <td className="px-4 py-3 font-medium text-[#111827]">
+              <td className="px-4 py-3 font-medium text-ink">
                 {row.sector}
               </td>
               <td className="px-4 py-3">
-                <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getBadgeStyles(row.estado)}`}
-                >
-                  {getBadgeLabel(row.estado)}
-                  {row.hora_inicio && row.hora_fin && (
-                    <span className="ml-1">({row.hora_inicio} - {row.hora_fin})</span>
-                  )}
-                </span>
+                <EstadoBadge estado={row.estado} horario={horario} />
               </td>
-              <td className="px-4 py-3 text-[#4d4d4d] max-w-xs">
-                <div className="flex flex-wrap items-center gap-1">
-                  {visibleBarrios.map((b, i) => (
-                    <span key={i} className="text-[#4d4d4d]">
-                      {b}{i < visibleBarrios.length - 1 ? ',' : ''}
-                    </span>
-                  ))}
-                  {hasMore && !expanded && (
-                    <button
-                      onClick={() => toggleExpand(row.id)}
-                      className="text-xs font-medium text-blue-600 hover:text-blue-800 cursor-pointer"
-                    >
-                      +{row.barrios.length - MAX_VISIBLE_BARRIOS} más
-                    </button>
-                  )}
-                  {expanded && (
-                    <button
-                      onClick={() => toggleExpand(row.id)}
-                      className="text-xs font-medium text-blue-600 hover:text-blue-800 cursor-pointer"
-                    >
-                      mostrar menos
-                    </button>
-                  )}
-                </div>
+              <td className="px-4 py-3 text-body max-w-xs">
+                <BarriosList barrios={row.barrios} />
               </td>
-              <td className="px-4 py-3 text-[#6b7280] text-xs whitespace-nowrap">
+              <td className="px-4 py-3 font-mono text-xs tabular-nums text-mute whitespace-nowrap">
                 {row.hora_monitoreo ? extractTime(row.hora_monitoreo) : '—'}
               </td>
             </tr>
@@ -188,48 +261,31 @@ function DesktopTable({ rows }: { rows: Reporte[] }) {
 }
 
 function MobileCard({ row }: { row: Reporte }) {
-  const [expanded, setExpanded] = useState(false);
-  const visibleBarrios = expanded ? row.barrios : row.barrios.slice(0, MAX_VISIBLE_BARRIOS);
-  const hasMore = row.barrios.length > MAX_VISIBLE_BARRIOS;
+  const { open } = useReporteDetail();
+  const horario =
+    row.hora_inicio && row.hora_fin ? `${row.hora_inicio}–${row.hora_fin}` : undefined;
 
   return (
-    <div className="px-4 py-3 space-y-1.5">
+    <div
+      role="button"
+      tabIndex={0}
+      aria-label={`Ver detalle de ${row.sector}`}
+      onClick={() => open(row)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') open(row);
+      }}
+      className="space-y-1.5 px-4 py-3 transition-colors active:bg-paper-soft/60"
+    >
       <div className="flex items-start justify-between gap-2">
-        <span
-          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getBadgeStyles(row.estado)}`}
-        >
-          {getBadgeLabel(row.estado)}
-        </span>
-        <span className="text-xs text-[#6b7280] whitespace-nowrap">
-          {formatFecha(row.fecha)}
+        <EstadoBadge estado={row.estado} horario={horario} />
+        <span className="font-mono text-xs tabular-nums text-mute whitespace-nowrap">
+          {formatFechaCorta(row.fecha)}
         </span>
       </div>
-      <div className="font-medium text-[#111827] text-sm">{row.sector}</div>
-      <div className="text-sm text-[#4d4d4d] leading-snug">
-        {visibleBarrios.map((b, i) => (
-          <span key={i}>
-            {b}{i < visibleBarrios.length - 1 ? ', ' : ''}
-          </span>
-        ))}
-        {hasMore && !expanded && (
-          <button
-            onClick={() => setExpanded(true)}
-            className="text-xs font-medium text-blue-600 hover:text-blue-800 cursor-pointer ml-1"
-          >
-            +{row.barrios.length - MAX_VISIBLE_BARRIOS} más
-          </button>
-        )}
-        {expanded && (
-          <button
-            onClick={() => setExpanded(false)}
-            className="text-xs font-medium text-blue-600 hover:text-blue-800 cursor-pointer ml-1"
-          >
-            mostrar menos
-          </button>
-        )}
-      </div>
-      <div className="text-xs text-[#6b7280]">
-        {row.hora_monitoreo ? `Actualizado: ${extractTime(row.hora_monitoreo)}` : ''}
+      <div className="font-medium text-sm text-ink">{row.sector}</div>
+      <BarriosList barrios={row.barrios} />
+      <div className="font-mono text-[10px] uppercase tracking-wider text-mute">
+        {row.hora_monitoreo ? `Act. ${extractTime(row.hora_monitoreo)}` : ''}
       </div>
     </div>
   );
@@ -239,12 +295,12 @@ export function DataTableSkeleton() {
   return (
     <div className="animate-pulse">
       {[...Array(5)].map((_, i) => (
-        <div key={i} className="flex gap-4 p-4 border-b border-[#e5e7eb]">
-          <div className="h-4 bg-gray-200 rounded w-1/6" />
-          <div className="h-4 bg-gray-200 rounded w-1/6" />
-          <div className="h-4 bg-gray-200 rounded w-1/6" />
-          <div className="h-4 bg-gray-200 rounded w-1/3" />
-          <div className="h-4 bg-gray-200 rounded w-1/6" />
+        <div key={i} className="flex gap-4 border-b border-line p-4">
+          <div className="h-4 bg-paper-deep rounded w-1/6" />
+          <div className="h-4 bg-paper-deep rounded w-1/6" />
+          <div className="h-4 bg-paper-deep rounded w-1/6" />
+          <div className="h-4 bg-paper-deep rounded w-1/3" />
+          <div className="h-4 bg-paper-deep rounded w-1/6" />
         </div>
       ))}
     </div>
