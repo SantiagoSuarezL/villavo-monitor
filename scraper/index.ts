@@ -9,7 +9,7 @@ process.on('unhandledRejection', (err) => {
   process.exit(1);
 });
 
-const MESES: Record<string, string> = {
+export const MESES: Record<string, string> = {
   'enero': '01', 'febrero': '02', 'marzo': '03',
   'abril': '04', 'mayo': '05', 'junio': '06',
   'julio': '07', 'agosto': '08', 'septiembre': '09',
@@ -18,16 +18,16 @@ const MESES: Record<string, string> = {
 
 const MONTHS_ES = Object.keys(MESES).map(m => m.toUpperCase());
 
-function getCurrentMonthES(): string {
+export function getCurrentMonthES(): string {
   return MONTHS_ES[new Date().getMonth()];
 }
 
-function extractDayFromFilename(fileName: string): number {
+export function extractDayFromFilename(fileName: string): number {
   const match = fileName.match(/(\d{2})\s+DE\s+/i);
   return match ? parseInt(match[1], 10) : 99;
 }
 
-function extractDateFromFileName(fileName: string): string {
+export function extractDateFromFileName(fileName: string): string {
   const match = fileName.match(/SUMINISTRO DEL SERVICIO (\d{2}) DE (\w+)/i);
   if (!match) {
     console.warn(`⚠ No se pudo extraer fecha de: ${fileName}, usando fecha actual`);
@@ -192,4 +192,6 @@ async function main() {
   }
 }
 
-main();
+if (process.env.VITEST !== 'true') {
+  main();
+}
