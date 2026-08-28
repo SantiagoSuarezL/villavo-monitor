@@ -10,6 +10,13 @@ Formato de cada entrada: fecha, target/módulo, observación, hipótesis, estado
 
 ## En curso
 
+### 2026-08-28 — Vercel deploy — verificar env TURSO_* tras features PWA/OG/SEO
+
+- **Observación:** Se agregaron `opengraph-image.tsx` (nodejs runtime, query Turso) y `sitemap.ts` (dinámicas `?sector_id` vía getDbClient). En Vercel el build necesita `TURSO_DATABASE_URL/AUTH_TOKEN` (fallback try/catch ya cubre si falta, pero degrada OG a "Sin datos" y sitemap a solo base).
+- **Hipótesis:** Si `TURSO_*` no está en dashboard Vercel, `pnpm build` de CI podría fallar o servir OG degradado.
+- **Estado:** En monitoreo — verificar primer deploy de `main` tras push; revisar dashboard Vercel para `TURSO_*`.
+- **Acción:** Si falla, agregar secrets en Vercel (ver `TECHNICAL_SPEC.md:2`) y documentar como Regla de Oro.
+
 ### 2026-08-27 — GH Actions / Turso — Workflow deshabilitado tras 60d inactividad
 
 - **Observación:** GitHub deshabilitó automáticamente `EAAV Scraper` (schedule `0 13,19 * * *`) tras 60 días sin push; usuario reactivó manual y corrió `workflow_dispatch` de agosto con éxito (datos visibles).

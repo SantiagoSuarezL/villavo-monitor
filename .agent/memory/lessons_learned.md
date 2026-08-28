@@ -75,3 +75,23 @@
 
 **Regla de Oro:** *Verifica el formato real en DB antes de parsear fechas/horas; valida con regex y maneja ambos separadores `T` y espacio.*
 
+### Regla de Oro 12 [Testing - Vitest]: __dirname vs import.meta.dirname en ESM
+
+**Error:** `pnpm test` warn `Your Vite config uses features that are unsupported by configLoader: native — __dirname` y `scraper tsc` falla `Cannot find module '@napi-rs/canvas'` por `unpdf` tipos incompletos con `moduleResolution NodeNext`.
+
+**Root Cause:** `vitest.config.ts` ESM usaba `__dirname` (CommonJS) y `scraper/tsconfig.json` sin `skipLibCheck` validaba libs externas con tipos rotos.
+
+**Solución:** Cambiar a `path.resolve(import.meta.dirname, './src')` en `vitest.config.ts:12` y añadir `"skipLibCheck": true` en `scraper/tsconfig.json:7`.
+
+**Regla de Oro:** *En ESM usa `import.meta.dirname`; activa `skipLibCheck` en workspaces con deps de tipos incompletos.*
+
+### Regla de Oro 13 [PWA/OG - Runtime]: Turso en edge rompe build
+
+**Error:** `opengraph-image.tsx` y `sitemap.ts` con `runtime='edge'` fallan al importar `@libsql/client`/`getDbClient` (requiere Node, `TURSO_*` env) y el build se cae si falta DB en CI.
+
+**Root Cause:** Edge runtime no tiene `process.env` Node ni soporte para `httpsAgent`; además `sitemap` se genera en build sin DB.
+
+**Solución:** Usar `export const runtime='nodejs'` (OG) y `try/catch` + `await import('@/lib/db')` en `sitemap.ts:10` con fallback a solo `base` si `getDbClient` throw; `manifest.ts` con icons SVG+PNG y `viewport.themeColor`.
+
+**Regla de Oro:** *OG/Sitemap que usan Turso van en `nodejs` runtime con try/catch fallback; no uses edge para libsql.*
+

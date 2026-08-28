@@ -5,8 +5,8 @@
 ## Estado del proyecto
 
 **Proyecto:** villavo-monitor
-**Fase actual:** 9 — Rediseño Visual "Papel Técnico" completada (2026-08-27, opencode)
-**Próxima fase:** 6 — Testing y Optimización (única pendiente; Fases 1-5,7-9 ✓ en `roadmap.md`; ver `IMPLEMENTATION_PLAN.md: Hito 6` para DoD)
+**Fase actual:** 12 — PWA + SEO completada (2026-08-28, opencode). Plan completo A-D ✓: Fase 6 Testing, Fases 10-12 features
+**Próxima fase:** (todas ✓) — próximos pasos: Vercel deploy verify `TURSO_*`, AUDIT_DRIFT mensual, monitorear GH Actions. Ver `roadmap.md`
 
 ## Tabla de archivos
 

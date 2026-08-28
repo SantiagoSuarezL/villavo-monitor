@@ -7,6 +7,7 @@ import type { Reporte } from '@/lib/reporte';
 import { extractTime } from '@/lib/reporte';
 import { useEstadoGlossary } from '@/components/estado-glossary';
 import { useReporteDetail } from '@/components/reporte-detail';
+import { EmptyState } from '@/components/empty-state';
 
 const MAX_VISIBLE_BARRIOS = 3;
 
@@ -144,11 +145,7 @@ export function DataTable({ reportes: initialReportes, sectorId, q }: { reportes
         </div>
       )}
 
-      {visibleRows.length === 0 && (
-        <div className="px-4 py-10 text-center font-mono text-xs uppercase tracking-widest text-mute">
-          Sin reportes
-        </div>
-      )}
+      {visibleRows.length === 0 && <EmptyState query={q ?? null} />}
 
       {/* Desktop table */}
       {visibleRows.length > 0 && (
